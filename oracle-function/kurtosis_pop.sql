@@ -1,4 +1,4 @@
-CREATE OR REPLACE FUNCTION pg_catalog.kurtosis_pop_final_func(results numeric [ ])
+CREATE OR REPLACE FUNCTION pg_catalog.kurtosis_pop_final_func(results numeric [])
 RETURNS numeric
 LANGUAGE plpgsql
 COST 111 IMMUTABLE

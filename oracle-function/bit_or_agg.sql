@@ -6,7 +6,7 @@ AS $$
   select (case when results is null then val else  results|val end)::int;
 $$;
 
-CREATE AGGREGATE pg_catalog.bit_or_agg( numeric )
+CREATE AGGREGATE pg_catalog.bit_or_agg(numeric)
         (
           sfunc = pg_catalog.bit_or_agg_state_func,
           stype = int
