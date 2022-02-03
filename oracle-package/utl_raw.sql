@@ -45,7 +45,7 @@ RETURNS int4
 LANGUAGE SQL
 IMMUTABLE NOT FENCED NOT SHIPPABLE
 AS $$
-SELECT length(r);
+SELECT pg_catalog.length(r);
  $$;
 /
 
@@ -54,7 +54,7 @@ RETURNS bytea
 LANGUAGE SQL
 IMMUTABLE NOT FENCED NOT SHIPPABLE
 AS $$
-SELECT case when len is not null then  substr(r,pos,len) else substr(r,pos) end ;
+SELECT case when len is not null then  pg_catalog.substr(r,pos,len) else pg_catalog.substr(r,pos) end ;
  $$;
 /
 
@@ -70,6 +70,39 @@ begin
 l_tmp:=regexp_replace(REPLACE(r::TEXT,'\x',''), '(..)','=\1', 'g');
 for rec in (
 select fs_str,nvl(ts_str,'') ts_str from 
+(select row_number() over() fs_pos,fs_str from (
+select (regexp_matches(REPLACE(from_set::TEXT,'\x',''), '(..)', 'g')) [ 1 ] fs_str)) f
+left join 
+(select row_number() over() ts_pos,ts_str from (
+select (regexp_matches(REPLACE(to_set::TEXT,'\x',''), '(..)', 'g')) [ 1 ] ts_str)) t
+on f.fs_pos=t.ts_pos
+) loop
+l_tmp:=replace(l_tmp,'='||rec.fs_str,rec.ts_str);
+end loop;
+return decode(replace(l_tmp,'=',''),'HEX');
+end;
+$$;
+/
+
+
+CREATE OR REPLACE FUNCTION UTL_RAW.transliterate(
+r IN bytea,
+to_set in bytea DEFAULT ''::bytea,
+from_set in bytea DEFAULT ''::bytea,
+pad IN bytea DEFAULT '\000'::bytea )
+RETURNS bytea
+LANGUAGE plpgsql
+IMMUTABLE NOT FENCED NOT SHIPPABLE
+AS $$
+DECLARE
+l_tmp text;
+begin
+if length(pad)>1 then 
+RAISE WARNING 'Error in utl_raw.transliterate: pad must be 1 byte or null!';
+end if;
+l_tmp:=regexp_replace(REPLACE(r::TEXT,'\x',''), '(..)','=\1', 'g');
+for rec in (
+select fs_str,nvl(ts_str,REPLACE(pad::TEXT,'\x','')) ts_str from 
 (select row_number() over() fs_pos,fs_str from (
 select (regexp_matches(REPLACE(from_set::TEXT,'\x',''), '(..)', 'g')) [ 1 ] fs_str)) f
 left join 
