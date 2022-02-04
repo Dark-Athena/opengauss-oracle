@@ -5,7 +5,7 @@ RETURNS text
 LANGUAGE SQL
 IMMUTABLE NOT FENCED NOT SHIPPABLE
 AS $$
-SELECT convert_from(r,'UTF8');
+SELECT convert_from(r,pg_client_encoding());
  $$;
 /
 
@@ -54,36 +54,9 @@ RETURNS bytea
 LANGUAGE SQL
 IMMUTABLE NOT FENCED NOT SHIPPABLE
 AS $$
-SELECT case when len is not null then  pg_catalog.substr(r,pos,len) else pg_catalog.substr(r,pos) end ;
+SELECT case when len is not null then  substring(r from pos for len) else substring(r from pos) end ;
  $$;
 /
-
-
-CREATE OR REPLACE FUNCTION UTL_RAW.translate(r IN bytea,from_set in bytea,to_set in bytea )
-RETURNS bytea
-LANGUAGE plpgsql
-IMMUTABLE NOT FENCED NOT SHIPPABLE
-AS $$
-DECLARE
-l_tmp text;
-begin
-l_tmp:=regexp_replace(REPLACE(r::TEXT,'\x',''), '(..)','=\1', 'g');
-for rec in (
-select fs_str,nvl(ts_str,'') ts_str from 
-(select row_number() over() fs_pos,fs_str from (
-select (regexp_matches(REPLACE(from_set::TEXT,'\x',''), '(..)', 'g')) [ 1 ] fs_str)) f
-left join 
-(select row_number() over() ts_pos,ts_str from (
-select (regexp_matches(REPLACE(to_set::TEXT,'\x',''), '(..)', 'g')) [ 1 ] ts_str)) t
-on f.fs_pos=t.ts_pos
-) loop
-l_tmp:=replace(l_tmp,'='||rec.fs_str,rec.ts_str);
-end loop;
-return decode(replace(l_tmp,'=',''),'HEX');
-end;
-$$;
-/
-
 
 CREATE OR REPLACE FUNCTION UTL_RAW.transliterate(
 r IN bytea,
@@ -112,7 +85,78 @@ on f.fs_pos=t.ts_pos
 ) loop
 l_tmp:=replace(l_tmp,'='||rec.fs_str,rec.ts_str);
 end loop;
-return decode(replace(l_tmp,'=',''),'HEX');
+return ('\x'||replace(l_tmp,'=',''))::bytea;
+end;
+$$;
+/
+
+CREATE OR REPLACE FUNCTION UTL_RAW.translate(r IN bytea,from_set in bytea,to_set in bytea )
+RETURNS bytea
+LANGUAGE sql
+IMMUTABLE NOT FENCED NOT SHIPPABLE
+AS $$
+select UTL_RAW.transliterate(r,to_set,from_set,''::bytea);
+$$;
+/
+
+CREATE OR REPLACE FUNCTION UTL_RAW.copies(
+r IN bytea,
+n IN int)
+RETURNS bytea
+LANGUAGE plpgsql
+IMMUTABLE NOT FENCED NOT SHIPPABLE
+AS $$
+DECLARE
+l_result bytea DEFAULT ''::bytea;
+begin
+if n<0 then 
+RAISE WARNING 'n must be equal or greater than 1!';
+end if;
+if pg_catalog.length(r)<1 then 
+RAISE WARNING 'r is missing, null and/or 0 length!';
+end if;
+for i in 1..n LOOP
+l_result:=l_result||r;
+end loop;
+return l_result;
+end;
+$$;
+/
+
+CREATE OR REPLACE FUNCTION UTL_RAW.overlay(
+overlay_str IN bytea,
+target      IN bytea,
+pos         IN int4 DEFAULT 1,
+len         IN int4 DEFAULT NULL,
+pad         IN bytea            DEFAULT '\x00'::bytea)
+RETURNS bytea
+LANGUAGE plpgsql
+IMMUTABLE NOT FENCED NOT SHIPPABLE
+AS $$
+DECLARE
+l_result bytea;
+l_overlay_str bytea;
+l_len int4;
+l_pad bytea;
+begin
+l_overlay_str:=overlay_str;
+if length(pad)>1 THEN
+l_pad:=substring(pad from 1 for 1);
+ELSE
+l_pad:=pad;
+end if;
+if len is null then 
+l_len:=length(overlay_str);
+else  
+l_len:=len;
+end if;
+if length(l_overlay_str)>l_len THEN
+l_overlay_str:=substring(l_overlay_str from 1 for l_len);
+elsif length(l_overlay_str)<l_len THEN
+l_overlay_str:=l_overlay_str||UTL_RAW.copies(l_pad,l_len-length(overlay_str) );
+end if;
+l_result:=substring(target from 1 for pos-1)||l_overlay_str||substring(target from pos+l_len);
+return l_result;
 end;
 $$;
 /

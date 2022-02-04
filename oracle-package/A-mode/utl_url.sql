@@ -47,7 +47,7 @@ as
   begin
     select CONVERT_FROM(string_agg(CASE
                                      WHEN LENGTH(A) = 3 THEN
-                                       decode(REPLACE(A, '%'), 'HEX')
+                                       REPLACE(A, '%','\x')::bytea
                                      ELSE
                                        A :: bytea
                                    END, '' :: bytea), url_charset) into l_return
