@@ -160,3 +160,90 @@ return l_result;
 end;
 $$;
 /
+
+CREATE OR REPLACE FUNCTION UTL_RAW.xrange(
+start_byte IN bytea,
+end_byte IN bytea)
+RETURNS bytea
+LANGUAGE plpgsql
+IMMUTABLE NOT FENCED NOT SHIPPABLE
+AS $$
+DECLARE
+l_result bytea DEFAULT ''::bytea;
+l_start_int int4;
+l_end_int int4;
+begin
+if pg_catalog.length(start_byte)!=1 or pg_catalog.length(end_byte)!=1  then 
+RAISE WARNING 'start_byte and end_byte must be single byte!';
+end if;
+l_start_int:=get_byte(start_byte,0);
+l_end_int:=get_byte(end_byte,0);
+for i in 0..l_end_int-l_start_int LOOP
+l_result:=l_result||('\x'||lpad(to_hex(l_start_int+i),2,'0'))::bytea;
+end loop;
+return l_result;
+end;
+$$;
+/
+
+CREATE OR REPLACE FUNCTION UTL_RAW.reverse(
+r IN bytea)
+RETURNS bytea
+LANGUAGE plpgsql
+IMMUTABLE NOT FENCED NOT SHIPPABLE
+AS $$
+DECLARE
+l_result bytea DEFAULT ''::bytea;
+begin
+for i in reverse pg_catalog.length(r)..1   LOOP
+l_result:=l_result||substring(r from i for 1);
+end loop;
+return l_result;
+end;
+$$;
+/
+
+CREATE OR REPLACE FUNCTION UTL_RAW.compare(
+                   r1  IN bytea,
+                   r2  IN bytea,
+                   pad IN bytea DEFAULT '\x00'::bytea)
+RETURNS int4
+LANGUAGE plpgsql
+IMMUTABLE NOT FENCED NOT SHIPPABLE
+AS $$
+DECLARE
+l_result int4 DEFAULT 0;
+l_r1 bytea DEFAULT ''::bytea;
+l_r2 bytea DEFAULT ''::bytea;
+begin
+for i in 1..greatest(pg_catalog.length(r1),pg_catalog.length(r2))   LOOP
+l_r1:=substring(r1 from i for 1);
+l_r2:=substring(r2 from i for 1);
+if l_r1!=l_r2 THEN
+if l_r1=''::bytea then 
+l_r1:=pad;
+end if;
+if l_r2=''::bytea then 
+l_r2:=pad;
+end if;
+if l_r1!=l_r2 then 
+l_result:=i;
+EXIT;
+end if;
+end if;
+end loop;
+return l_result;
+end;
+$$;
+/
+
+CREATE OR REPLACE FUNCTION UTL_RAW.convert(r IN bytea,
+                   to_charset   IN text,
+                   from_charset IN text)
+RETURNS bytea
+LANGUAGE sql
+IMMUTABLE NOT FENCED NOT SHIPPABLE
+AS $$
+select convert_to(convert_from(r,from_charset),to_charset);
+$$;
+/
