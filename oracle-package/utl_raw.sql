@@ -8,6 +8,7 @@ AS $$
 SELECT convert_from(r,pg_client_encoding());
  $$;
 /
+--select UTL_RAW.cast_to_raw('测试');
 
 CREATE OR REPLACE FUNCTION UTL_RAW.cast_to_raw(c IN text)
 RETURNS BYTEA
@@ -17,6 +18,7 @@ AS $$
 SELECT c::BYTEA;
  $$;
 /
+--select UTL_RAW.cast_to_varchar2('测试'::bytea);
 
 CREATE OR REPLACE FUNCTION UTL_RAW.concat(
 r1  IN BYTEA DEFAULT ''::BYTEA,
@@ -39,6 +41,8 @@ AS $$
 SELECT r1||r2||r3||r4||r5||r6||r7||r8||r9||r10||r11||r12;
  $$;
 /
+--select UTL_RAW.concat('测'::bytea,'试'::bytea);
+
 
 CREATE OR REPLACE FUNCTION UTL_RAW.length(r IN bytea)
 RETURNS int4
@@ -48,6 +52,7 @@ AS $$
 SELECT pg_catalog.length(r);
  $$;
 /
+--select UTL_RAW.length('测'::bytea);
 
 CREATE OR REPLACE FUNCTION UTL_RAW.substr(r IN bytea,pos in int4,len in int4 DEFAULT null)
 RETURNS bytea
@@ -57,6 +62,7 @@ AS $$
 SELECT case when len is not null then  substring(r from pos for len) else substring(r from pos) end ;
  $$;
 /
+--select UTL_RAW.substr('测'::bytea,1,1);
 
 CREATE OR REPLACE FUNCTION UTL_RAW.transliterate(
 r IN bytea,
@@ -89,6 +95,7 @@ return ('\x'||replace(l_tmp,'=',''))::bytea;
 end;
 $$;
 /
+--select UTL_RAW.transliterate('测试'::bytea,decode('e6b5','HEX'),decode('e8af95','HEX'),'\000'::bytea)
 
 CREATE OR REPLACE FUNCTION UTL_RAW.translate(r IN bytea,from_set in bytea,to_set in bytea )
 RETURNS bytea
@@ -98,6 +105,7 @@ AS $$
 select UTL_RAW.transliterate(r,to_set,from_set,''::bytea);
 $$;
 /
+--select UTL_RAW.translate('测试'::bytea,decode('e6b58b','HEX'),decode('e8','HEX'))
 
 CREATE OR REPLACE FUNCTION UTL_RAW.copies(
 r IN bytea,
@@ -122,6 +130,7 @@ return l_result;
 end;
 $$;
 /
+--  select utl_raw.copies('\xFF'::bytea,10)   ;
 
 CREATE OR REPLACE FUNCTION UTL_RAW.overlay(
 overlay_str IN bytea,
@@ -160,6 +169,7 @@ return l_result;
 end;
 $$;
 /
+--select utl_raw.overlay('\xFFFFFF'::bytea, '\x112233445566778899'::bytea,2,5,'\xAA'::bytea) ;
 
 CREATE OR REPLACE FUNCTION UTL_RAW.xrange(
 start_byte IN bytea,
@@ -185,6 +195,7 @@ return l_result;
 end;
 $$;
 /
+--   select utl_raw.xrange('\x00'::bytea,'\x11'::bytea)      from dual ;
 
 CREATE OR REPLACE FUNCTION UTL_RAW.reverse(
 r IN bytea)
@@ -202,6 +213,7 @@ return l_result;
 end;
 $$;
 /
+--   select UTL_RAW.reverse('\x112233445566778899'::bytea);
 
 CREATE OR REPLACE FUNCTION UTL_RAW.compare(
                    r1  IN bytea,
@@ -236,6 +248,7 @@ return l_result;
 end;
 $$;
 /
+-- select UTL_RAW.compare('\x1122334455660000'::bytea,'\x112233445566'::bytea);
 
 CREATE OR REPLACE FUNCTION UTL_RAW.convert(r IN bytea,
                    to_charset   IN text,
@@ -247,3 +260,4 @@ AS $$
 select convert_to(convert_from(r,from_charset),to_charset);
 $$;
 /
+-- select UTL_RAW.convert('测试'::bytea,'GBK','UTF8');
