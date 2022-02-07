@@ -56,10 +56,24 @@ SELECT pg_catalog.length(r);
 
 CREATE OR REPLACE FUNCTION UTL_BYTEA.substr(r IN bytea,pos in int4,len in int4 DEFAULT null)
 RETURNS bytea
-LANGUAGE SQL
+LANGUAGE plpgSQL
 IMMUTABLE NOT FENCED NOT SHIPPABLE
 AS $$
-SELECT case when len is not null then  substring(r from pos for len) else substring(r from pos) end ;
+DECLARE 
+BEGIN
+if pos>0 then 
+return (case when len is not null 
+             then  substring(r from pos for len) 
+             else substring(r from pos) end );
+ELSE
+if -pos<len THEN
+RAISE 'Error in UTL_BYTEA.substr: out of index!';
+end if;
+return (case when len is not null 
+             then  pg_catalog.substr(r , pos , len) 
+             else pg_catalog.substr(r , pos) end ) ;
+end if;
+end;   
  $$;
 /
 --select UTL_BYTEA.substr('测'::bytea,1,1);
@@ -77,7 +91,7 @@ DECLARE
 l_tmp text;
 begin
 if length(pad)>1 then 
-RAISE WARNING 'Error in UTL_BYTEA.transliterate: pad must be 1 byte or null!';
+RAISE  'Error in UTL_BYTEA.transliterate: pad must be 1 byte or null!';
 end if;
 l_tmp:=regexp_replace(REPLACE(r::TEXT,'\x',''), '(..)','=\1', 'g');
 for rec in (
@@ -118,10 +132,10 @@ DECLARE
 l_result bytea DEFAULT ''::bytea;
 begin
 if n<0 then 
-RAISE WARNING 'n must be equal or greater than 1!';
+RAISE  'n must be equal or greater than 1!';
 end if;
 if pg_catalog.length(r)<1 then 
-RAISE WARNING 'r is missing, null and/or 0 length!';
+RAISE  'r is missing, null and/or 0 length!';
 end if;
 for i in 1..n LOOP
 l_result:=l_result||r;
@@ -147,6 +161,7 @@ l_result bytea;
 l_overlay_str bytea;
 l_len int4;
 l_pad bytea;
+l_pos_over_str bytea DEFAULT ''::bytea;
 begin
 l_overlay_str:=overlay_str;
 if length(pad)>1 THEN
@@ -164,7 +179,10 @@ l_overlay_str:=substring(l_overlay_str from 1 for l_len);
 elsif length(l_overlay_str)<l_len THEN
 l_overlay_str:=l_overlay_str||UTL_BYTEA.copies(l_pad,l_len-length(overlay_str) );
 end if;
-l_result:=substring(target from 1 for pos-1)||l_overlay_str||substring(target from pos+l_len);
+if pos>length(target) THEN
+l_pos_over_str:=UTL_BYTEA.copies(pad,pos-length(target)-1);
+end if;
+l_result:=substring(target from 1 for pos-1)||l_pos_over_str||l_overlay_str||substring(target from pos+l_len);
 return l_result;
 end;
 $$;
@@ -182,20 +200,26 @@ DECLARE
 l_result bytea DEFAULT ''::bytea;
 l_start_int int4;
 l_end_int int4;
+l_tmp BYTEA;
 begin
 if pg_catalog.length(start_byte)!=1 or pg_catalog.length(end_byte)!=1  then 
-RAISE WARNING 'start_byte and end_byte must be single byte!';
+RAISE  'start_byte and end_byte must be single byte!';
 end if;
 l_start_int:=get_byte(start_byte,0);
 l_end_int:=get_byte(end_byte,0);
-for i in 0..l_end_int-l_start_int LOOP
-l_result:=l_result||('\x'||lpad(to_hex(l_start_int+i),2,'0'))::bytea;
+ LOOP
+l_tmp:=('\x'||lpad(to_hex(CASE WHEN l_start_int >255 THEN l_start_int-256 ELSE l_start_int END ),2,'0'))::bytea;
+l_result:=l_result||l_tmp;
+if l_tmp=UTL_BYTEA.substr(end_byte,1,1) then exit;
+end if;
+l_start_int:=l_start_int+1;
 end loop;
 return l_result;
 end;
 $$;
 /
---   select UTL_BYTEA.xrange('\x00'::bytea,'\x11'::bytea)      from dual ;
+--   select UTL_BYTEA.xrange('\x00'::bytea,'\x11'::bytea);
+--   select UTL_BYTEA.xrange('\xFA'::bytea,'\x06'::bytea);
 
 CREATE OR REPLACE FUNCTION UTL_BYTEA.reverse(
 r IN bytea)
@@ -363,10 +387,6 @@ CREATE OR REPLACE FUNCTION UTL_BYTEA.bit_complement(r bytea)
 AS $$
 DECLARE
 l_result bytea DEFAULT ''::bytea;
-l_r1 bytea;
-l_r2 bytea;
-l_r1_len int8;
-l_r2_len int8;
 begin
 l_result:=r;
 for i in 0..bit_length(r)-1 LOOP
