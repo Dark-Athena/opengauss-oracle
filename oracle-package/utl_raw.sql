@@ -412,3 +412,130 @@ end;
 $$;
 /
 --select UTL_raw.bit_complement('1122FF') ='EEDD00'::raw;
+
+CREATE OR REPLACE FUNCTION utl_raw.cast_to_number(r raw)
+ RETURNS NUMERIC
+ LANGUAGE plpgsql
+ IMMUTABLE NOT FENCED NOT SHIPPABLE
+AS $$
+/*2022-02-08 memo:未对输入参数的正确性进行校验，错误的输入会带来错误的输出（by:DarkAthena）*/
+DECLARE
+l_result NUMERIC DEFAULT 0::numeric;
+l_first_byte int4;
+l_len int8;
+begin
+l_len:=utl_raw.length(r);
+l_first_byte:=to_number(utl_raw.substr(r,1,1),'xx');
+if l_first_byte>128 then 
+for i in 1..l_len-1 LOOP
+l_result:=l_result+(to_number(utl_raw.substr(r,i+1,1),'xx')-1)*(100^(l_first_byte-193-(i-1)));
+end loop;
+elsif l_first_byte<128 then 
+for i in 1..l_len-2 LOOP
+l_result:=l_result-(101-to_number(utl_raw.substr(r,i+1,1),'xx'))*(100^(62-l_first_byte-(i-1)));
+end loop;
+elsif l_first_byte=128 then 
+l_result:=0;
+else 
+RAISE  'raw format error!';
+end if;
+return l_result;
+end;
+$$;
+/
+--select utl_raw.cast_TO_number('C1020B') =1.1;
+--select utl_raw.cast_TO_number('3E645B66') =-1.1;
+
+
+CREATE OR REPLACE FUNCTION utl_raw.cast_from_number(n NUMERIC)
+ RETURNS raw
+ LANGUAGE plpgsql
+ IMMUTABLE NOT FENCED NOT SHIPPABLE
+AS $$
+DECLARE
+l_result raw DEFAULT ''::raw;
+l_len int4;
+l_x NUMERIC;
+l_pos int4 DEFAULT 1::int4;
+begin
+l_len:=ceil((pg_catalog.length(ceil(abs(n)))/2))::int8;
+if n>0 then 
+l_result:=to_hex(193+(l_len-1))::raw;
+LOOP
+l_x:=trunc(n,-(l_len-l_pos)*2)-trunc(n,-(l_len-l_pos+1)*2);
+l_result:=rawcat(l_result,to_hex((l_x/(100^(l_len-l_pos))+1)::int4)::raw);
+if trunc(n,-(l_len-l_pos)*2)=n then 
+exit;
+end if;
+l_pos:=l_pos+1;
+end loop;
+elsif n<0 then 
+l_result:=to_hex(62-(l_len-1))::raw;
+LOOP
+l_x:=trunc(n,-(l_len-l_pos)*2)-trunc(n,-(l_len-l_pos+1)*2);
+l_result:=rawcat(l_result,to_hex(101+(l_x/(100^(l_len-l_pos)))::int4)::raw);
+if trunc(n,-(l_len-l_pos)*2)=n then 
+exit;
+end if;
+l_pos:=l_pos+1;
+end loop;
+l_result:=rawcat(l_result,'66'::raw);
+elsif n=0 then 
+l_result:='80'::raw;
+else 
+RAISE  'NUMERIC error!';
+end if;
+return l_result;
+end;
+$$;
+/
+--select utl_raw.cast_from_number(1.1) ='C1020B'::raw;
+--select utl_raw.cast_from_number(-1.1) ='3E645B66'::raw;
+
+
+
+CREATE OR REPLACE FUNCTION utl_raw.cast_to_binary_integer(r IN RAW,
+                                  endianess IN int1  DEFAULT 1)
+ RETURNS int8
+ LANGUAGE plpgsql
+ IMMUTABLE NOT FENCED NOT SHIPPABLE
+AS $$
+DECLARE
+l_result int8;
+begin
+if endianess in (1,3) then  
+l_result:=to_number(r::text,'xxxxxxxx');
+elsif endianess =2 then
+l_result:=to_number(utl_raw.reverse(r)::text,'xxxxxxxx');
+else
+RAISE  'invaild endianess!';
+end if;
+return l_result;
+end;
+$$;
+/
+--select utl_raw.cast_to_binary_integer('FF00')=65280;
+--select utl_raw.cast_to_binary_integer('FF00',2)=255;
+
+CREATE OR REPLACE FUNCTION utl_raw.cast_from_binary_integer(n IN INT8,
+                                  endianess IN int1  DEFAULT 1)
+ RETURNS raw
+ LANGUAGE plpgsql
+ IMMUTABLE NOT FENCED NOT SHIPPABLE
+AS $$
+DECLARE
+l_result raw DEFAULT ''::raw;
+begin
+if endianess in (1,3) then  
+l_result:=trim(to_char(n,'xxxxxxxx'))::raw;
+elsif endianess =2 then
+l_result:=utl_raw.reverse(trim(to_char(n,'xxxxxxxx'))::raw);
+else
+RAISE  'invaild endianess!';
+end if;
+return l_result;
+end;
+$$;
+/
+--select utl_raw.cast_from_binary_integer(65280)='FF00'::RAW
+--select utl_raw.cast_from_binary_integer(65280,2)='00FF'::RAW
