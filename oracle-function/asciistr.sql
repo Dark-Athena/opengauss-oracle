@@ -4,7 +4,7 @@ CREATE OR REPLACE FUNCTION pg_catalog.asciistr(text)
  NOT FENCED NOT SHIPPABLE
 AS $$
 select string_agg( (case when ascii(s)<=255 and s!='\' then s else 
-'\'||lpad((to_hex(ascii(s))::text),4,'0') end ),'')
+'\'||lpad(upper(to_hex(ascii(s))::text),4,'0') end ),'')
   from (select unnest(string_to_array($1, null) ) s);
  $$;
 /
