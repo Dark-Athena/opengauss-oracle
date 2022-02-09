@@ -1,0 +1,1 @@
+由于opengauss支持raw类型,而postgresql不支持,因此对于之前基于postgresql写的将bytea类型视作raw类型的包移动到本目录下
