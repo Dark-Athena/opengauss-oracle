@@ -6,5 +6,5 @@ AS $$
 select string_agg( (case when ascii(s)<=255 and s!='\' then s else 
 '\'||lpad(upper(to_hex(ascii(s))::text),4,'0') end ),'')
   from (select unnest(string_to_array($1, null) ) s);
- $$;
+$$;
 /
