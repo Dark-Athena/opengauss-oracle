@@ -496,12 +496,12 @@ $$;
 
 CREATE OR REPLACE FUNCTION utl_raw.cast_to_binary_integer(r IN RAW,
                                   endianess IN int1  DEFAULT 1)
- RETURNS int8
+ RETURNS int4
  LANGUAGE plpgsql
  IMMUTABLE NOT FENCED NOT SHIPPABLE
 AS $$
 DECLARE
-l_result int8;
+l_result int4;
 begin
 if endianess in (1,3) then  
 l_result:=to_number(r::text,'xxxxxxxx');
@@ -514,22 +514,21 @@ return l_result;
 end;
 $$;
 /
---select utl_raw.cast_to_binary_integer('FF00')=65280;
---select utl_raw.cast_to_binary_integer('FF00',2)=255;
+--select utl_raw.cast_to_binary_integer('0000FF00')=65280;
+--select utl_raw.cast_to_binary_integer('FF000000',2)=255;
 
-CREATE OR REPLACE FUNCTION utl_raw.cast_from_binary_integer(n IN INT8,
-                                  endianess IN int1  DEFAULT 1)
+CREATE OR REPLACE FUNCTION utl_raw.cast_from_binary_integer(n integer, endianess tinyint DEFAULT 1)
  RETURNS raw
  LANGUAGE plpgsql
  IMMUTABLE NOT FENCED NOT SHIPPABLE
 AS $$
 DECLARE
 l_result raw DEFAULT ''::raw;
-begin
+begin                       
 if endianess in (1,3) then  
-l_result:=trim(to_char(n,'xxxxxxxx'))::raw;
+l_result:=lpad(to_char(n,'fmxxxxxxxx'),8,'0')::raw;
 elsif endianess =2 then
-l_result:=utl_raw.reverse(trim(to_char(n,'xxxxxxxx'))::raw);
+l_result:=utl_raw.reverse(replace(lpad(to_char(n,'fmxxxxxxxx'),8,'0'),' ','0')::raw);
 else
 RAISE  'invaild endianess!';
 end if;
@@ -537,5 +536,5 @@ return l_result;
 end;
 $$;
 /
---select utl_raw.cast_from_binary_integer(65280)='FF00'::RAW
---select utl_raw.cast_from_binary_integer(65280,2)='00FF'::RAW
+--select utl_raw.cast_from_binary_integer(65280)='0000FF00'::RAW
+--select utl_raw.cast_from_binary_integer(65280,2)='00FF0000'::RAW
