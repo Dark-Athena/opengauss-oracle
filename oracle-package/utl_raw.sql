@@ -15,7 +15,7 @@ RETURNS raw
 LANGUAGE SQL
 IMMUTABLE NOT FENCED NOT SHIPPABLE
 AS $$
-SELECT rawtohex(c)::raw;
+SELECT rawtohex(replace(c,'\','\\'))::raw;
  $$;
 /
 --select utl_raw.cast_to_raw( 'Cameron' )='43616D65726F6E'::raw;
