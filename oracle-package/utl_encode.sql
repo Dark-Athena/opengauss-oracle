@@ -96,7 +96,7 @@ CREATE OR REPLACE FUNCTION utl_encode.quoted_printable_encode(r in raw)
  IMMUTABLE NOT FENCED NOT SHIPPABLE
 AS $$
 DECLARE
-l_result text DEFAULT ''::raw;
+l_result raw DEFAULT ''::raw;
 l_def_charset text DEFAULT 'utf8';
 begin
 select pg_encoding_to_char(encoding) into l_def_charset from pg_database where datname=current_database();
@@ -126,7 +126,7 @@ CREATE OR REPLACE FUNCTION utl_encode.quoted_printable_decode(r in raw)
  IMMUTABLE NOT FENCED NOT SHIPPABLE
 AS $$
 DECLARE
-l_result text DEFAULT ''::raw;
+l_result raw DEFAULT ''::raw;
 l_def_charset text DEFAULT 'utf8';
 begin
 select pg_encoding_to_char(encoding) into l_def_charset from pg_database where datname=current_database();
@@ -217,3 +217,139 @@ $$;
 
 --SELECT UTL_ENCODE.mimeheader_decode('=?UTF-8?Q?What=20is=20the=20date=20=E7=8E=8B=20=3D20=20/=20\=3F?=')='What is the date 王 =20 / \?';
 --SELECT UTL_ENCODE.mimeheader_decode('=?UTF8?B?V2hhdCBpcyB0aGUgZGF0ZSDnjosgPTIwIC8gXD8=?=')='What is the date 王 =20 / \?'
+
+
+create or replace function UTL_ENCODE.uuencode(r   in raw,
+                    type       in int1 default 1::int1,
+                    filename   in text default 'uuencode.txt',
+                    permission in text default '0')
+ RETURNS raw
+ LANGUAGE plpgsql
+ IMMUTABLE NOT FENCED NOT SHIPPABLE
+AS $$
+DECLARE
+/*Oracle自带函数有BUG(doc id 2197134.1),未遵循uuencode标准,官方不建议使用
+    而本函数按uuencode标准生成 -- DarkAthena 2022-02-14*/
+l_result text DEFAULT ''::text;
+l_pos int4 DEFAULT 1;
+l_3_bytes text DEFAULT ''::text;
+l_new_4_chr text DEFAULT ''::text;
+l_full_str text DEFAULT ''::text;
+l_line_num int4 DEFAULT 1;
+l_line_str text DEFAULT ''::text;
+l_line_len int4 DEFAULT 60::int4;
+begin
+if type not in (1,2,3,4) THEN
+RAISE  'input type error!';
+end if;
+loop
+l_3_bytes:=substring(r from l_pos*6-5 for 6);
+if length(l_3_bytes)=0 THEN
+exit;
+elsif length(l_3_bytes)!=6 THEN
+l_3_bytes:=rpad(l_3_bytes,6,'0');
+end if;
+select 
+chr(SUBSTRING(a from 1 for 6)::int +32)||
+chr(SUBSTRING(a from 7 for 6)::int+32)||
+chr(SUBSTRING(a from 13 for 6)::int+32)||
+chr(SUBSTRING(a from 19 for 6)::int+32) into l_new_4_chr
+from 
+(select to_number(l_3_bytes,'xxxxxx')::int::bit(24) a);
+l_full_str:=l_full_str||l_new_4_chr;
+l_pos:=l_pos+1;
+end loop;
+dbms_output.put_line(l_full_str);
+loop
+l_line_str:=substring(l_full_str from l_line_num*(l_line_len)-(l_line_len-1) for l_line_len);
+if length(l_line_str)=0 then 
+exit;
+end if;
+l_result:=l_result||chr((length(l_line_str))/4*3+32)||l_line_str||chr(13)||chr(10);
+l_line_num:=l_line_num+1;
+end loop;
+l_result:=replace(l_result,' ','`');
+
+if type in (1,2) then 
+l_result:='begin '||permission||' '||filename||chr(13)||chr(10)||l_result;
+end if;
+if type in (1,4) then 
+l_result:=l_result||'`'||chr(13)||chr(10)||'end';
+end if;
+
+return rawtohex(replace(l_result,'\','\\'))::raw;
+end;
+$$;
+/
+
+
+create or replace function UTL_ENCODE.uudecode(r   in raw)
+ RETURNS raw
+ LANGUAGE plpgsql
+ IMMUTABLE NOT FENCED NOT SHIPPABLE
+AS $$
+DECLARE
+/*Oracle自带函数有BUG(doc id 2197134.1),未遵循uuencode标准,官方不建议使用
+    而本函数按uuencode标准解析-- DarkAthena 2022-02-14*/
+l_ori_str text DEFAULT ''::text;
+l_result text DEFAULT ''::text;
+l_pos int4 DEFAULT 1;
+l_3_bytes text DEFAULT ''::text;
+l_new_4_chr text DEFAULT ''::text;
+l_full_str text DEFAULT ''::text;
+l_line_num int4 DEFAULT 1;
+l_line_str text DEFAULT ''::text;
+l_line_len int4 DEFAULT 60::int4;
+begin
+SELECT convert_from(rawsend(r),
+(select pg_encoding_to_char(encoding) as encoding from pg_database where datname=current_database())) 
+into l_ori_str;
+
+l_ori_str:=replace(l_ori_str,chr(13)||chr(10)||'`'||chr(13)||chr(10)||'end','');
+
+if substr(l_ori_str,1,5) ='begin' THEN
+l_ori_str:=substr(l_ori_str,instr(l_ori_str,chr(10))+1);
+end if ;
+
+LOOP
+l_line_str:=substr(l_ori_str,2+(l_line_len+3)*(l_line_num-1),l_line_len);
+if length(l_line_str)=0 then exit;
+end if;
+l_full_str:=l_full_str||l_line_str;
+l_line_num:=l_line_num+1;
+end loop;
+
+l_full_str:=replace(l_full_str,'`',' ');
+
+LOOP
+l_new_4_chr:=substring(l_full_str from 1+4*(l_pos-1) for 4);
+if length(l_new_4_chr)=0 then exit;
+end if;
+select  to_char((listagg(substring( (ascii(a)-32)::bit(8) from 3 for 6)::text) within group(order by 1))::bit(24)::int,'fmxxxxxx')::raw
+into l_3_bytes
+from (select unnest(string_to_array(l_new_4_chr,null)) a);
+l_result:=l_result||l_3_bytes;
+l_pos:=l_pos+1;
+end LOOP;
+
+l_result:=regexp_replace(l_result,'(00)+$','');
+return l_result::raw;
+end;
+$$;
+/       
+
+/*
+--uuencode
+select  utl_raw.cast_to_varchar2(UTL_ENCODE.uuencode(utl_raw.cast_to_raw('今天天气真的好abcdefg4156787fsd~！@#￥%——+(\)*:;[]{】,。？、、、gdfhoqsr')::raw));
+
+select utl_raw.cast_to_raw($q$begin 0 uuencode.txt
+MY+N*Y:2IY:2IYK"4YYR?YYJ$Y:6]86)C9&5F9S0Q-38W.#=F<V1^[[R!0"/O
+MOZ4EXH"4XH"4*RA<*2HZ.UM=>^.`D2SC@(+OO)_C@('C@('C@(%G9&9H;W%S
+#<@``
+`
+end$q$);
+
+--uudecode
+select utl_raw.cast_to_varchar2(UTL_ENCODE.uudecode('626567696E2030207575656E636F64652E7478740D0A4D592B4E2A593A3249593A3249594B22345959523F59594A24593A365D3836294339263546395330512D3338572E233D463C56315E5B5B522130222F4F0D0A4D4F5A344558482234584822342A52413C2A32485A2E554D3D3E5E2E604432534340282B4F4F295F43402827434028274340282547392639483B5725530D0A233C4060600D0A600D0A656E64'::raw));
+
+*/
