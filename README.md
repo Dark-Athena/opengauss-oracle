@@ -1,7 +1,20 @@
 # opengauss-oracle
 
+
+#### 2022-02-15
+
+由于master分支可能不会及时合并,最新添加的代码可能会在子分支内,以下为对应的文件地址
+package
+https://gitee.com/enmotech/compat-tools/blob/feature/ora_packages/Oracle_Packages.sql
+
+function
+https://gitee.com/enmotech/compat-tools/blob/feature/ora_functions/Oracle_Functions.sql
+
+-----
+
 #### 2022-01-28 通知
 本项目对于不同版本兼容性验证通过后的对象，会合并到[compat-tools](https://gitee.com/enmotech/compat-tools)项目中
+
 
 -----
 
