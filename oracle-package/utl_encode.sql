@@ -244,7 +244,7 @@ RAISE  'input type error!';
 end if;
 loop
 l_3_bytes:=substring(r from l_pos*6-5 for 6);
-if length(l_3_bytes)=0 THEN
+if length(l_3_bytes)=0 or l_3_bytes is null THEN
 exit;
 elsif length(l_3_bytes)!=6 THEN
 l_3_bytes:=rpad(l_3_bytes,6,'0');
@@ -262,7 +262,7 @@ end loop;
 dbms_output.put_line(l_full_str);
 loop
 l_line_str:=substring(l_full_str from l_line_num*(l_line_len)-(l_line_len-1) for l_line_len);
-if length(l_line_str)=0 then 
+if length(l_line_str)=0 or l_line_str is null  then 
 exit;
 end if;
 l_result:=l_result||chr((length(l_line_str))/4*3+32)||l_line_str||chr(13)||chr(10);
@@ -313,7 +313,7 @@ end if ;
 
 LOOP
 l_line_str:=substr(l_ori_str,2+(l_line_len+3)*(l_line_num-1),l_line_len);
-if length(l_line_str)=0 then exit;
+if length(l_line_str)=0 or l_line_str is null then exit;
 end if;
 l_full_str:=l_full_str||l_line_str;
 l_line_num:=l_line_num+1;
@@ -323,7 +323,7 @@ l_full_str:=replace(l_full_str,'`',' ');
 
 LOOP
 l_new_4_chr:=substring(l_full_str from 1+4*(l_pos-1) for 4);
-if length(l_new_4_chr)=0 then exit;
+if length(l_new_4_chr)=0 or l_new_4_chr is null then exit;
 end if;
 select  to_char((listagg(substring( (ascii(a)-32)::bit(8) from 3 for 6)::text) within group(order by 1))::bit(24)::int,'fmxxxxxx')::raw
 into l_3_bytes
