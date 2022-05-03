@@ -58,7 +58,7 @@ https://gitee.com/enmotech/compat-tools/blob/feature/ora_functions/Oracle_Functi
 |-|-|-|-|-|-
 |DBMS_HADOOP|在数据库中集成对HIVE及HADOOP进行操作、查询的功能||N|
 |DBMS_JOB|作业管理|Y|N|
-|DBMS_LOB|大参数操作包||?|
+|DBMS_LOB|大对象操作包||Y|80%
 |DBMS_MLE|多开发语言引擎(目前Oracle只支持JS)||N|
 |DBMS_METADATA|元数据管理|Y|N|
 |DBMS_OUTPUT|控制台输出信息|Y|N|
@@ -223,7 +223,24 @@ https://gitee.com/enmotech/compat-tools/blob/feature/ora_functions/Oracle_Functi
 |UTL_RAW|XRANGE|||完成|20220205
 |UTL_URL|ESCAPE|||完成|20220202
 |UTL_URL|UNESCAPE|||完成|20220202
-
+|DBMS_LOB|OPEN|||完成|20220503
+|DBMS_LOB|ERASE|||完成|20220503
+|DBMS_LOB|READ|||完成|20220503
+|DBMS_LOB|SUBSTR|||完成|20220503
+|DBMS_LOB|APPEND|||完成|20220503
+|DBMS_LOB|CLOSE|||完成|20220503
+|DBMS_LOB|TRIM|||完成|20220503
+|DBMS_LOB|WRITE|||完成|20220503
+|DBMS_LOB|GETLENGTH|||完成|20220503
+|DBMS_LOB|CREATETEMPORARY|||完成|20220503
+|DBMS_LOB|FREETEMPORARY|||完成|20220503
+|DBMS_LOB|INSTR|||完成|20220503
+|DBMS_LOB|COMPARE|||完成|20220503
+|DBMS_LOB|COPY|||完成|20220503
+|DBMS_LOB|WRITEAPPEND|||完成|20220503
+|DBMS_LOB|convertToClob|||
+|DBMS_LOB|convertToBlob|||
+|DBMS_LOB|clob2file|||
 
 #### 注意事项
 1.STANDARD_HASH函数依赖于postgresql-contrib模块中的pgcrypto，但openGauss默认没有此模块，请自行提前安装
