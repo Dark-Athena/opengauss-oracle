@@ -320,8 +320,8 @@ len_2 int4;
 lob1_bytea bytea; 
 lob2_bytea bytea;
 begin
-lob1_bytea:=substr(rawsend(lob_1),offset_1,least(amount,pg_catalog.length(rawsend(lob_1))-offset_1));
-lob2_bytea:=substr(rawsend(lob_2),offset_2,least(amount,pg_catalog.length(rawsend(lob_2))-offset_2));
+lob1_bytea:=substr(rawsend(lob_1),offset_1,least(amount,pg_catalog.length(rawsend(lob_1))-offset_1+1));
+lob2_bytea:=substr(rawsend(lob_2),offset_2,least(amount,pg_catalog.length(rawsend(lob_2))-offset_2+1));
 
 len_1:=pg_catalog.length(lob1_bytea);
 len_2:=pg_catalog.length(lob2_bytea);
@@ -336,7 +336,11 @@ for i in 1..greatest(len_1,len_2)   LOOP
 l_r1:=pg_catalog.substr(lob1_bytea , i , 1);
 l_r2:=pg_catalog.substr(lob2_bytea , i , 1);
 if l_r1!=l_r2 THEN
-l_result:=i;
+if l_r1>l_r2 then 
+l_result:=1;
+else
+l_result:=-1;
+end if;
 EXIT;
 end if;
 end loop;
@@ -368,8 +372,8 @@ len_2 int4;
 lob1_text text; 
 lob2_text text;
 begin
-lob1_text:=substr(lob_1::text,offset_1,least(amount,pg_catalog.length(lob_1::text)-offset_1));
-lob2_text:=substr(lob_2::text,offset_2,least(amount,pg_catalog.length(lob_2::text)-offset_2));
+lob1_text:=substr(lob_1::text,offset_1,least(amount,pg_catalog.length(lob_1::text)-offset_1+1));
+lob2_text:=substr(lob_2::text,offset_2,least(amount,pg_catalog.length(lob_2::text)-offset_2+1));
 
 len_1:=pg_catalog.length(lob1_text);
 len_2:=pg_catalog.length(lob2_text);
@@ -384,7 +388,11 @@ for i in 1..greatest(len_1,len_2)   LOOP
 l_r1:=pg_catalog.substr(lob1_text , i , 1);
 l_r2:=pg_catalog.substr(lob2_text , i , 1);
 if l_r1!=l_r2 THEN
-l_result:=i;
+if l_r1::bytea>l_r2::bytea then 
+l_result:=1;
+else
+l_result:=-1;
+end if;
 EXIT;
 end if;
 end loop;
