@@ -22,8 +22,6 @@ AS $function$
             end if;
             EXECUTE 'select '||v_typsend||'(:1)' into v_bytea using $1;
             SELECT length(v_bytea) into v_len;
-           raise notice '%',v_bytea;
-           raise notice '%',v_len;
           
             v_hexstr := 'Len=' || v_len || ' ';
             v_tmp := ',';
