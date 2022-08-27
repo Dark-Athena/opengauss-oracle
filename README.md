@@ -235,6 +235,7 @@
 |DBMS_LOB|convertToClob|||
 |DBMS_LOB|convertToBlob|||
 |DBMS_LOB|clob2file|||
+|DBMS_CRYPTO|hash|部分完成（MD5/SHA256）|20220827|
 
 #### 注意事项
 1.STANDARD_HASH函数依赖于postgresql-contrib模块中的pgcrypto，但openGauss默认没有此模块，请自行提前安装
