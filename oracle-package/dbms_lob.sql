@@ -120,7 +120,7 @@ RETURNS integer
 LANGUAGE plpgsql STRICT IMMUTABLE
 AS $$
 DECLARE
-    pos integer NOT NULL DEFAULT 0;
+    pos integer  DEFAULT 0;
     occur_number integer NOT NULL DEFAULT 0;
     temp_str BYTEA;
     beg integer;
@@ -142,6 +142,8 @@ BEGIN
             pos := position(RAWSEND(pattern) IN temp_str);
             IF pos = 0 THEN
                 RETURN 0;
+            elsif pos is null THEN
+                RETURN null;
             END IF;
             beg := beg + pos;
         END LOOP;
@@ -182,7 +184,7 @@ RETURNS integer
 LANGUAGE plpgsql STRICT IMMUTABLE
 AS $$
 DECLARE
-    pos integer NOT NULL DEFAULT 0;
+    pos integer  DEFAULT 0;
     occur_number integer NOT NULL DEFAULT 0;
     temp_str TEXT;
     beg integer;
@@ -204,6 +206,8 @@ BEGIN
             pos := position(pattern IN temp_str);
             IF pos = 0 THEN
                 RETURN 0;
+            elsif pos is null THEN
+                RETURN null;
             END IF;
             beg := beg + pos;
         END LOOP;
@@ -313,8 +317,8 @@ IMMUTABLE NOT FENCED NOT SHIPPABLE
 AS $$
 DECLARE
 l_result int4 DEFAULT 0;
-l_r1 bytea DEFAULT ''::bytea;
-l_r2 bytea DEFAULT ''::bytea;
+l_r1 bytea DEFAULT '\x'::bytea;
+l_r2 bytea DEFAULT '\x'::bytea;
 len_1 int4;
 len_2 int4;
 lob1_bytea bytea; 
@@ -413,10 +417,10 @@ CREATE or replace PROCEDURE DBMS_LOB.copy(dest_lob    IN OUT  BLOB,
 AS
 DECLARE
 dest_bytea bytea;
-end_bytea bytea DEFAULT ''::bytea;
+end_bytea bytea DEFAULT '\x'::bytea;
 null_bytea bytea DEFAULT '\x00'::bytea;
 dest_bytea_length int4;
-pad_bytea bytea DEFAULT ''::bytea;
+pad_bytea bytea DEFAULT '\x'::bytea;
 BEGIN
 dest_bytea:=rawsend(dest_lob);
 dest_bytea_length:=pg_catalog.length(dest_bytea);
@@ -487,7 +491,7 @@ DECLARE
 lob_length int4;
 lob_bytea bytea;
 null_bytea bytea DEFAULT '\x00'::bytea;
-pad_bytea bytea DEFAULT ''::bytea;
+pad_bytea bytea DEFAULT '\x'::bytea;
 end_bytea bytea;
 begin
 lob_bytea:=rawsend(lob_loc);

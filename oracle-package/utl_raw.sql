@@ -296,7 +296,7 @@ CREATE OR REPLACE FUNCTION utl_raw.bit_and(r1 raw, r2 raw)
  IMMUTABLE NOT FENCED NOT SHIPPABLE
 AS $$
 DECLARE
-l_result bytea DEFAULT ''::bytea;
+l_result bytea DEFAULT '\x'::bytea;
 l_r1 raw;
 l_r2 raw;
 l_r1_bytea bytea;
@@ -331,7 +331,7 @@ CREATE OR REPLACE FUNCTION utl_raw.bit_or(r1 raw, r2 raw)
  IMMUTABLE NOT FENCED NOT SHIPPABLE
 AS $$
 DECLARE
-l_result bytea DEFAULT ''::bytea;
+l_result bytea DEFAULT '\x'::bytea;
 l_r1 raw;
 l_r2 raw;
 l_r1_bytea bytea;
@@ -366,7 +366,7 @@ CREATE OR REPLACE FUNCTION utl_raw.bit_xor(r1 raw, r2 raw)
  IMMUTABLE NOT FENCED NOT SHIPPABLE
 AS $$
 DECLARE
-l_result bytea DEFAULT ''::bytea;
+l_result bytea DEFAULT '\x'::bytea;
 l_r1 raw;
 l_r2 raw;
 l_r1_bytea bytea;
@@ -401,7 +401,7 @@ CREATE OR REPLACE FUNCTION utl_raw.bit_complement(r raw)
  IMMUTABLE NOT FENCED NOT SHIPPABLE
 AS $$
 DECLARE
-l_result bytea DEFAULT ''::bytea;
+l_result bytea DEFAULT '\x'::bytea;
 begin
 l_result:=rawsend(r);
 for i in 0..bit_length(l_result)-1 LOOP
